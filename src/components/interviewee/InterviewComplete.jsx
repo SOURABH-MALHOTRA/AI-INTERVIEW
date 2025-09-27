@@ -1,0 +1,183 @@
+import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { Card, Typography, Tag, List, Progress, Space, Divider, Button, Alert } from 'antd';
+import { CheckCircleOutlined, RedoOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { clearCurrentInterview } from '../../redux/slices/interviewSlice';
+
+const { Title, Text, Paragraph } = Typography;
+
+const InterviewComplete = () => {
+  const dispatch = useDispatch();
+  const { currentInterview, interviewResults, performanceFeedback, scores } = useSelector(state => state.interview);
+  
+  // Priority: interviewResults > currentInterview.summary > fallback
+  const results = interviewResults || currentInterview?.summary;
+  
+  if (!results) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <Alert 
+          message="Results Processing" 
+          description="Your interview results are being analyzed. Please wait..." 
+          type="info" 
+          showIcon 
+        />
+      </div>
+    );
+  }
+
+  const handleStartNewInterview = () => {
+    dispatch(clearCurrentInterview());
+    window.location.href = '/';
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <Card className="text-center">
+        <CheckCircleOutlined style={{ fontSize: '64px', color: '#52c41a' }} />
+        <Title level={2} className="mt-4">Interview Completed! 🎉</Title>
+        <Text type="secondary">Thank you for completing the interview.</Text>
+        
+        <div className="mt-6">
+          <Button 
+            type="primary" 
+            size="large" 
+            icon={<RedoOutlined />}
+            onClick={handleStartNewInterview}
+          >
+            Start New Interview
+          </Button>
+        </div>
+      </Card>
+
+      {/* Overall Score - Multiple fallbacks */}
+      <Card title="Overall Performance">
+        <div className="text-center">
+          <Progress 
+            type="circle" 
+            percent={results.percentage || scores?.overall * 10 || 0} 
+            size={120}
+            strokeColor={{
+              '0%': '#ff4d4f',
+              '100%': '#52c41a',
+            }}
+          />
+          <Title level={3} className="mt-4">
+            Score: {results.finalScore || scores?.overall || 'N/A'}/{results.maxPossibleScore || 10}
+          </Title>
+          <Tag color={getRecommendationColor(results.recommendation)}>
+            {results.recommendation || 'Evaluation Complete'}
+          </Tag>
+        </div>
+      </Card>
+
+      {/* Overall Assessment */}
+      <Card title="Overall Assessment">
+        <Paragraph>{performanceFeedback || results.overallAssessment || results.feedback || 'Detailed assessment will be available soon.'}</Paragraph>
+        <Paragraph>{results.detailedSummary || ''}</Paragraph>
+      </Card>
+
+      {/* Strengths */}
+      {(results.strengths && results.strengths.length > 0) && (
+        <Card title="Strengths">
+          <List
+            dataSource={results.strengths}
+            renderItem={item => (
+              <List.Item>
+                <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
+                {item}
+              </List.Item>
+            )}
+          />
+        </Card>
+      )}
+
+      {/* Improvements */}
+      {(results.improvements && results.improvements.length > 0) && (
+        <Card title="Areas for Improvement">
+          <List
+            dataSource={results.improvements}
+            renderItem={item => (
+              <List.Item>
+                <CheckCircleOutlined style={{ color: '#faad14', marginRight: 8 }} />
+                {item}
+              </List.Item>
+            )}
+          />
+        </Card>
+      )}
+
+      {/* Question-wise Breakdown */}
+      {currentInterview?.questions && (
+        <Card title="Detailed Breakdown">
+          {currentInterview.questions.map((question, index) => (
+            <div key={question.id || index} className="mb-4 p-3 border rounded">
+              <Space direction="vertical" className="w-full">
+                <Text strong>Q{index + 1}: {question.question}</Text>
+                <Text type="secondary">Your Answer: {question.answer}</Text>
+                <div className="flex justify-between">
+                  <Tag color={getDifficultyColor(question.level)}>
+                    {question.level} • Score: {question.score}/3
+                  </Tag>
+                  <Text type="secondary">Evaluated by: {question.evaluatedBy || 'AI'}</Text>
+                </div>
+                <Text>Feedback: {question.feedback}</Text>
+              </Space>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* Additional Results Info */}
+      <Card title="Additional Information">
+        <Space direction="vertical" className="w-full">
+          <div>
+            <InfoCircleOutlined style={{ marginRight: 8 }} />
+            <Text strong>Results generated by: </Text>
+            <Text>{results.evaluatedBy || 'AI Interview Assistant'}</Text>
+          </div>
+          <div>
+            <InfoCircleOutlined style={{ marginRight: 8 }} />
+            <Text strong>Evaluation time: </Text>
+            <Text>{new Date().toLocaleString()}</Text>
+          </div>
+        </Space>
+      </Card>
+
+      {/* New Interview Button */}
+      <Card className="text-center">
+        <Button 
+          type="primary" 
+          size="large" 
+          icon={<RedoOutlined />}
+          onClick={handleStartNewInterview}
+        >
+          Start New Interview
+        </Button>
+      </Card>
+    </div>
+  );
+};
+
+// Helper functions (same as before)
+const getRecommendationColor = (recommendation) => {
+  switch (recommendation?.toLowerCase()) {
+    case 'strong yes': return 'green';
+    case 'yes': return 'blue';
+    case 'no': return 'orange';
+    case 'strong no': return 'red';
+    default: return 'gray';
+  }
+};
+
+const getDifficultyColor = (level) => {
+  switch (level) {
+    case 'easy': return 'green';
+    case 'medium': return 'orange';
+    case 'hard': return 'red';
+    default: return 'blue';
+  }
+};
+
+export default InterviewComplete;
